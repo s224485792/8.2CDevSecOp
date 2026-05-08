@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     stages {
+
         stage('Install Dependencies') {
             steps {
                 sh 'npm install'
@@ -10,13 +11,42 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh 'npm test'
+                script {
+                    
+                    def testStatus = sh(script: 'npm test', returnStatus: true)
+
+                    
+                    emailext(
+                        subject: testStatus == 0 ? " TESTS PASSED" : " TESTS FAILED",
+                        body: testStatus == 0 ?
+                            "The test stage completed successfully." :
+                            "The test stage has failed. Please review the attached logs.",
+                        to: "s224485792@deakin.edu.au",
+                        attachLog: true
+                    )
+
+                    
+                    if (testStatus != 0) {
+                        error("Tests failed")
+                    }
+                }
             }
         }
 
-        stage('Security Audit') {
+        stage('Security Scan') {
             steps {
-                sh 'npm audit --audit-level=high || true'
+                script {
+                    
+                    def auditStatus = sh(script: 'npm audit --audit-level=high || true', returnStatus: true)
+
+                    
+                    emailext(
+                        subject: " Security Scan Completed",
+                        body: "Security scan finished with status code: ${auditStatus}. Logs attached.",
+                        to: "s224485792@deakin.edu.au",
+                        attachLog: true
+                    )
+                }
             }
         }
 
